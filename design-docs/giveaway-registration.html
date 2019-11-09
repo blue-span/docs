@@ -1,0 +1,233 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Improved Giveaway Registration and Winner Calculation &#8212; bluespan  documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/bluespan.css" />
+
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="&lt;no title&gt;" href="index.html" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="improved-giveaway-registration-and-winner-calculation">
+<h1>Improved Giveaway Registration and Winner Calculation<a class="headerlink" href="#improved-giveaway-registration-and-winner-calculation" title="Permalink to this headline">¶</a></h1>
+<p>In the context that we might want to do giveaways perpetually, it might make
+sense to invest in improving the giveaway registration process and making winner
+calculation fairer.</p>
+<p>At the same time, this is also about having a cool/fun project to casually hack
+on.</p>
+<div class="section" id="abstract">
+<h2>Abstract<a class="headerlink" href="#abstract" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>viewers register for a giveaway via a new “<em>register for current giveaway</em>”
+button on <a class="reference external" href="https://bluespan.gg/giveaway">bluespan.gg/giveaway</a></p></li>
+<li><p>that button starts an OAuth2 flow <a class="footnote-reference brackets" href="#oauth-example" id="id1">2</a> which allows the user to
+authenticate themselves via YouTube</p></li>
+<li><p>a giveaway winner is selected by:</p>
+<ul>
+<li><p>of the people that clicked the <em>register for current giveaway</em> button
+(during the current giveaway), sort/weight <a class="footnote-reference brackets" href="#weight" id="id2">1</a> by:</p>
+<ul>
+<li><p>between the last giveaway and now:</p>
+<ul>
+<li><p>number of distinct days a user made a message in the live stream chat</p></li>
+<li><p>number of streams that a user clicked the like button for</p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>pick random winner, and pair that winner with a random giveaway reward (for
+giveaways that have more than one type of reward)</p></li>
+<li><p>winners are announced in chat by <em>Santa Claus Bot™</em> and/or <em>Giveaway Bot™</em></p></li>
+</ul>
+<div class="admonition-estimated-effort admonition">
+<p class="admonition-title">Estimated effort</p>
+<p>1-3 weekends, depending on personal productivity levels</p>
+</div>
+<dl class="footnote brackets">
+<dt class="label" id="weight"><span class="brackets"><a class="fn-backref" href="#id2">1</a></span></dt>
+<dd><p>this means that each user be 0-28x more likely to be selected than
+a user with a weight of 1. A weight of 0 means that they registered, but did
+not like any videos or chat in the stream. A weight of 28 means that over a
+period of 14 days, the user liked every single video, and made at least one
+stream comment every single day (obviously, this user is Lulu). We could
+tweak/rescale this math arbitrarily of course; this is just an example.</p>
+</dd>
+<dt class="label" id="oauth-example"><span class="brackets"><a class="fn-backref" href="#id1">2</a></span></dt>
+<dd><p>“OAuth2 flow”: the same thing that happens when you click <em>Log In With YouTube</em> on <a class="reference external" href="https://streamlabs.com/login">streamlabs.com/login</a></p>
+</dd>
+</dl>
+</div>
+<div class="section" id="how-do-we-track-the-people-that-registered">
+<h2>How do we track the people that registered?<a class="headerlink" href="#how-do-we-track-the-people-that-registered" title="Permalink to this headline">¶</a></h2>
+<p>The bluespan.gg giveaway service will track this state in a local (<a class="reference external" href="https://www.sqlite.org/index.html">sqlite</a>,
+probably) database.</p>
+<p>The data model is very simple; something like:</p>
+<table class="docutils align-default" id="id4">
+<caption><span class="caption-text">Giveaways</span><a class="headerlink" href="#id4" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>start_date</p></th>
+<th class="head"><p>end_date</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ryzen-1</span></code></p></td>
+<td><p>3 Nov 2019</p></td>
+<td><p>10 Nov 2019</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ryzen-2</span></code></p></td>
+<td><p>11 Nov 2019</p></td>
+<td><p>24 Nov 2019</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>..</cite></p></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-default" id="id5">
+<caption><span class="caption-text">Registrations</span><a class="headerlink" href="#id5" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>id</p></th>
+<th class="head"><p>giveaway_id</p></th>
+<th class="head"><p>username <a class="footnote-reference brackets" href="#channel-displayname" id="id3">3</a></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">registration-abc</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ryzen-1</span></code></p></td>
+<td><p>PigsGoMoo</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">registration-def</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ryzen-1</span></code></p></td>
+<td><p>billgates</p></td>
+</tr>
+<tr class="row-even"><td><p><cite>..</cite></p></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-default" id="id6">
+<caption><span class="caption-text">Authorizations</span><a class="headerlink" href="#id6" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>username</p></th>
+<th class="head"><p>token</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>PigsGoMoo</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">QQKfzA...</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>billgates</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">QQIBib...</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><cite>..</cite></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="how-do-we-know-which-of-blue-span-s-streams-happened-in-a-giveaway-period">
+<h2>How do we know which of Blue Span’s streams happened in a giveaway period?<a class="headerlink" href="#how-do-we-know-which-of-blue-span-s-streams-happened-in-a-giveaway-period" title="Permalink to this headline">¶</a></h2>
+<p>Roughly:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>GET https://developers.google.com/youtube/v3/live/docs/liveBroadcasts/list
+
+&quot;part&quot;: &quot;id,snippet&quot;
+&quot;mine&quot;: true
+&quot;onBehalfOfContentOwner&quot;: &quot;Blue Span&quot;
+</pre></div>
+</div>
+<p>The <a class="reference external" href="https://developers.google.com/youtube/v3/live/docs/liveBroadcasts#resource-representation">liveBroadcast</a> resource gives us:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>&quot;id&quot;: string
+&quot;actualStartTime&quot;: datetime
+&quot;actualEndTime&quot;: datetime
+&quot;liveChatId&quot;: string
+</pre></div>
+</div>
+</div>
+<div class="section" id="how-do-we-know-which-users-chatted-during-a-particular-stream">
+<h2>How do we know which users chatted during a particular stream?<a class="headerlink" href="#how-do-we-know-which-users-chatted-during-a-particular-stream" title="Permalink to this headline">¶</a></h2>
+<p>Given a <code class="docutils literal notranslate"><span class="pre">liveChatId</span></code>, pretty much dump the entire chat log:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>GET https://www.googleapis.com/youtube/v3/liveChat/messages
+
+&quot;part&quot;: &quot;authorDetails&quot;
+&quot;liveChatId&quot;: string
+</pre></div>
+</div>
+<p>The <a class="reference external" href="https://developers.google.com/youtube/v3/live/docs/liveChatMessages#resource-representation">liveChatMessages</a> resource gives us, for each message:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>&quot;channelId&quot;: string
+&quot;displayName&quot;: string
+</pre></div>
+</div>
+<dl class="footnote brackets">
+<dt class="label" id="channel-displayname"><span class="brackets"><a class="fn-backref" href="#id3">3</a></span></dt>
+<dd><p>This is why it is partially wrong to ask for a
+“YouTube username”. When you log in to YouTube, you are actually a
+“channel”. A more strictly precise word for “YouTube username” is “channel
+displayName”.</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="how-do-we-know-which-of-blue-span-s-streams-a-user-liked">
+<h2>How do we know which of Blue Span’s streams a user liked?<a class="headerlink" href="#how-do-we-know-which-of-blue-span-s-streams-a-user-liked" title="Permalink to this headline">¶</a></h2>
+<p>Also not hard.</p>
+<p>We already have OAuth tokens for each registered user with the
+<code class="docutils literal notranslate"><span class="pre">https://www.googleapis.com/auth/youtube.readonly</span></code> scope. This gives us the
+ability to make API calls like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">GET</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">www</span><span class="o">.</span><span class="n">googleapis</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">youtube</span><span class="o">/</span><span class="n">v3</span><span class="o">/</span><span class="n">videos</span>
+
+<span class="s2">&quot;part&quot;</span><span class="p">:</span> <span class="s2">&quot;snippet&quot;</span>
+<span class="s2">&quot;myRating&quot;</span><span class="p">:</span> <span class="s2">&quot;like&quot;</span>
+<span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;broadcastId1,broadcastId2,..,broadcastId14&quot;</span>
+</pre></div>
+</div>
+<p>…on behalf of that user, where each <cite>broadcastId1,broadcastId2,..,broadcastId14</cite>
+represents a broadcast returned from our <code class="docutils literal notranslate"><span class="pre">liveBroadcasts/list</span></code> call earlier.</p>
+</div>
+</div>
+
+
+          </div>
+          
+      </div>
+      <div class="clearer"></div>
+    </div>
+<div class="footer">
+  &copy;2019, Blue Span. |
+  <a href="https://github.com/blue-span/docs/blob/master/source/design-docs/giveaway-registration"
+     rel="nofollow">Edit on Github</a>
+</div>
+
+  </body>
+</html>

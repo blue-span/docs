@@ -1,0 +1,38 @@
+li > ul {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+}
+
+li > p {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+}
+
+li {
+    margin-bottom: 0.5em;
+}
+
+table {
+    margin-bottom: 1em;
+    width: 80%;
+}
+
+
+div.admonition p.admonition-title {
+    font-size: 1em;
+    font-weight: bold;
+}
+
+div.note {
+    background-color: #EEE;
+}
+
+div.admonition {
+    padding-top: 15.3px;
+    padding-bottom: 0;
+}
+
+div.admonition p {
+    font-size: 0.9em;
+    font-style: oblique;
+}
